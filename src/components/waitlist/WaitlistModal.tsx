@@ -31,7 +31,7 @@ export function WaitlistModal({ context, onClose }: WaitlistModalProps) {
   const { event, phase } = context
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <button
         type="button"
         aria-label="Close waitlist modal"
@@ -43,13 +43,13 @@ export function WaitlistModal({ context, onClose }: WaitlistModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="waitlist-modal-title"
-        className="relative w-full max-w-lg animate-[slideUp_0.3s_ease-out] rounded-t-3xl border border-slate-800 bg-slate-900/95 p-6 pb-8 shadow-2xl backdrop-blur-md sm:rounded-3xl"
+        className="relative flex max-h-[92dvh] w-full max-w-lg animate-[slideUp_0.3s_ease-out] flex-col overflow-y-auto rounded-t-3xl border border-slate-800 bg-slate-900/95 p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl backdrop-blur-md sm:max-h-[85dvh] sm:rounded-3xl sm:p-6 sm:pb-6"
       >
-        <div className="mx-auto mb-5 h-1 w-12 rounded-full bg-slate-700 sm:hidden" />
+        <div className="mx-auto mb-4 h-1 w-12 shrink-0 rounded-full bg-slate-700 sm:hidden" />
 
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 id="waitlist-modal-title" className="text-lg font-semibold text-slate-50">
+            <h2 id="waitlist-modal-title" className="text-lg font-semibold text-slate-50 sm:text-xl">
               Die-Hard Waitlist
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-400">
@@ -61,10 +61,10 @@ export function WaitlistModal({ context, onClose }: WaitlistModalProps) {
         </div>
 
         <div className="mt-5 rounded-xl border border-rose-500/20 bg-gradient-to-br from-violet-500/10 to-rose-500/10 p-4">
-          <p className="text-xs uppercase tracking-wider text-slate-400">
+          <p className="text-[11px] uppercase tracking-wider text-slate-400 sm:text-xs">
             Predictive gate estimate
           </p>
-          <p className="mt-1 text-lg font-bold text-slate-50">
+          <p className="mt-1 text-lg font-bold text-slate-50 sm:text-xl">
             ~{formatKSh(phase.estimatedGateValue)}
           </p>
           <p className="mt-1 text-xs text-slate-400">
@@ -77,24 +77,26 @@ export function WaitlistModal({ context, onClose }: WaitlistModalProps) {
           <input
             type="tel"
             placeholder="+254 7XX XXX XXX"
-            className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3 text-sm text-slate-50 placeholder:text-slate-600 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/50"
+            className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3 text-base text-slate-50 placeholder:text-slate-600 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/50 sm:text-sm"
           />
         </label>
 
-        <button
-          type="button"
-          className="mt-5 w-full rounded-xl bg-gradient-to-r from-violet-600 to-rose-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-rose-500 active:scale-95"
-        >
-          Join {phase.tabLabel} Waitlist
-        </button>
+        <div className="mt-5 space-y-3">
+          <button
+            type="button"
+            className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-rose-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-rose-500 active:scale-95"
+          >
+            Join {phase.tabLabel} Waitlist
+          </button>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-3 w-full rounded-xl border border-slate-700 px-4 py-3 text-sm font-medium text-slate-400 transition-all hover:border-slate-600 hover:text-slate-300 active:scale-95"
-        >
-          Not now
-        </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-xl border border-slate-700 px-4 py-3 text-sm font-medium text-slate-400 transition-all hover:border-slate-600 hover:text-slate-300 active:scale-95"
+          >
+            Not now
+          </button>
+        </div>
       </div>
     </div>
   )
