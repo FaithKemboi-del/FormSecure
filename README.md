@@ -1,1 +1,1 @@
-"# My New Project" 
+"# Project Setup" 
