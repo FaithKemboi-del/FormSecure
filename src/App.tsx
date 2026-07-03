@@ -1,68 +1,123 @@
-import { useState } from 'react'
-import { EventCard } from './components/events/EventCard'
-import { EscrowSheet } from './components/escrow/EscrowSheet'
-import { WaitlistModal } from './components/waitlist/WaitlistModal'
-import { mockEvents } from './data/mockEvents'
-import type { Event, PhaseContext, TicketPhase } from './types/event'
+import { useMemo, useState } from 'react'
+import { EventDetail } from './components/events/EventDetail'
+import { EscrowCheckout } from './components/escrow/EscrowCheckout'
+import { BottomNav } from './components/ui/BottomNav'
+import { Toast } from './components/ui/Toast'
+import { WaitlistSheet } from './components/waitlist/WaitlistSheet'
+import { HomeView } from './components/views/HomeView'
+import { ProfileView } from './components/views/ProfileView'
+import { SavedView } from './components/views/SavedView'
+import { SearchView } from './components/views/SearchView'
+import { WalletView } from './components/views/WalletView'
+import { useToast } from './hooks/useToast'
+import { useWishlist } from './hooks/useWishlist'
+import type { Event, NavTab, PhaseFilter, Seller, TicketPhase } from './types/event'
 
 export default function App() {
-  const [escrowContext, setEscrowContext] = useState<PhaseContext | null>(null)
-  const [waitlistContext, setWaitlistContext] = useState<PhaseContext | null>(null)
+  const { toast, showToast } = useToast()
+  const { isSaved, toggleWishlist, animatingId, savedIds, savedCount } = useWishlist({
+    onToggle: showToast,
+  })
 
-  const handleBuy = (event: Event, phase: TicketPhase) => {
-    setWaitlistContext(null)
-    setEscrowContext({ event, phase })
-  }
+  const [activeTab, setActiveTab] = useState<NavTab>('home')
+  const [phaseFilter, setPhaseFilter] = useState<PhaseFilter>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [waitlistEvent, setWaitlistEvent] = useState<Event | null>(null)
+  const [checkoutContext, setCheckoutContext] = useState<{
+    event: Event
+    phase: TicketPhase
+    seller: Seller
+  } | null>(null)
 
-  const handleJoinWaitlist = (event: Event, phase: TicketPhase) => {
-    setEscrowContext(null)
-    setWaitlistContext({ event, phase })
-  }
+  const showBottomNav = selectedEvent === null
+
+  const content = useMemo(() => {
+    if (selectedEvent) {
+      return (
+        <EventDetail
+          event={selectedEvent}
+          isSaved={isSaved(selectedEvent.id)}
+          isAnimating={animatingId === selectedEvent.id}
+          onBack={() => setSelectedEvent(null)}
+          onToggleWishlist={toggleWishlist}
+          onEscrowBuy={(event, phase, seller) => {
+            setCheckoutContext({ event, phase, seller })
+          }}
+        />
+      )
+    }
+
+    switch (activeTab) {
+      case 'home':
+        return (
+          <HomeView
+            phaseFilter={phaseFilter}
+            onPhaseFilterChange={setPhaseFilter}
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            isSaved={isSaved}
+            animatingId={animatingId}
+            onToggleWishlist={toggleWishlist}
+            onViewEvent={setSelectedEvent}
+            onJoinWaitlist={setWaitlistEvent}
+          />
+        )
+      case 'search':
+        return <SearchView />
+      case 'saved':
+        return (
+          <SavedView
+            savedIds={savedIds}
+            animatingId={animatingId}
+            onToggleWishlist={toggleWishlist}
+            onViewEvent={setSelectedEvent}
+            onJoinWaitlist={setWaitlistEvent}
+          />
+        )
+      case 'wallet':
+        return <WalletView />
+      case 'profile':
+        return <ProfileView onOpenSaved={() => setActiveTab('saved')} />
+      default:
+        return null
+    }
+  }, [
+    activeTab,
+    animatingId,
+    isSaved,
+    phaseFilter,
+    savedIds,
+    searchQuery,
+    selectedEvent,
+    toggleWishlist,
+  ])
 
   return (
-    <div className="min-h-dvh bg-slate-950">
-      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-violet-400 sm:text-xs">
-              FormSecure
-            </p>
-            <h1 className="truncate text-base font-semibold text-slate-50 sm:text-lg">
-              Verified Resale Market
-            </h1>
-          </div>
-          <span className="shrink-0 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 text-[11px] text-slate-400 sm:text-xs">
-            Nairobi
-          </span>
-        </div>
-      </header>
+    <div className="min-h-dvh bg-bg text-text-hi">
+      <div className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col">
+        <main
+          className={`mx-auto w-full max-w-5xl flex-1 px-4 pt-4 sm:px-6 sm:pt-6 lg:px-8 ${
+            showBottomNav
+              ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]'
+              : 'pb-[max(1rem,env(safe-area-inset-bottom))]'
+          }`}
+        >
+          {content}
+        </main>
+      </div>
 
-      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
-        <section className="mb-5 sm:mb-8">
-          <h2 className="text-sm font-medium text-slate-50 sm:text-base">Live Events</h2>
-          <p className="mt-1 max-w-2xl text-sm text-slate-400">
-            Browse ticket phases, compare resale prices, and lock in escrow-verified deals across
-            Nairobi&apos;s hottest shows.
-          </p>
-          <p className="mt-2 text-xs text-slate-500">
-            {mockEvents.length} events · swipe phases on mobile · grid view on tablet &amp; desktop
-          </p>
-        </section>
+      {showBottomNav ? (
+        <BottomNav
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          savedCount={savedCount}
+        />
+      ) : null}
 
-        <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {mockEvents.map((event) => (
-            <EventCard
-              key={event.id}
-              event={event}
-              onBuy={handleBuy}
-              onJoinWaitlist={handleJoinWaitlist}
-            />
-          ))}
-        </div>
-      </main>
-
-      <EscrowSheet context={escrowContext} onClose={() => setEscrowContext(null)} />
-      <WaitlistModal context={waitlistContext} onClose={() => setWaitlistContext(null)} />
+      <Toast message={toast?.message ?? null} />
+      <WaitlistSheet event={waitlistEvent} onClose={() => setWaitlistEvent(null)} />
+      <EscrowCheckout context={checkoutContext} onClose={() => setCheckoutContext(null)} />
     </div>
   )
 }

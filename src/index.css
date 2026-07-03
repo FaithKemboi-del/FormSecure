@@ -1,5 +1,26 @@
 @import 'tailwindcss';
 
+@theme {
+  --color-bg: #05060a;
+  --color-panel: #0d1220;
+  --color-panel-glass: rgb(17 23 41 / 0.62);
+  --color-stroke: rgb(255 255 255 / 0.08);
+  --color-text-hi: #f4f6fb;
+  --color-text-mid: #a7adc2;
+  --color-text-lo: #656d85;
+  --color-emerald: #16f2b2;
+  --color-emerald-dim: rgb(22 242 178 / 0.14);
+  --color-violet: #9b7bff;
+  --color-violet-dim: rgb(155 123 255 / 0.16);
+  --color-mpesa: #3fbf5f;
+  --color-amber: #ffb648;
+  --color-danger: #ff6a6a;
+
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
 html {
   -webkit-tap-highlight-color: transparent;
 }
@@ -12,17 +33,75 @@ body,
 
 body {
   margin: 0;
-  min-height: 100dvh;
-  background-color: rgb(2 6 23);
-  color: rgb(248 250 252);
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+  background:
+    radial-gradient(1200px 700px at 12% -10%, rgb(155 123 255 / 0.1), transparent 60%),
+    radial-gradient(1000px 600px at 90% 10%, rgb(22 242 178 / 0.08), transparent 55%),
+    var(--color-bg);
+  color: var(--color-text-hi);
+  font-family: var(--font-body);
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-white/8 bg-panel-glass p-3 backdrop-blur-[10px];
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1.5 font-mono text-[10.5px] text-text-mid;
+  }
+
+  .pill-on {
+    @apply border-violet/35 bg-violet-dim text-[#c9baff];
+  }
+
+  .pill-emerald {
+    @apply border-emerald/30 bg-emerald-dim text-emerald;
+  }
+
+  .pill-amber {
+    @apply border-amber/35 bg-amber/15 text-amber;
+  }
+
+  .btn {
+    @apply flex items-center justify-center gap-2 rounded-[14px] border-0 px-[13px] py-[13px] text-[13.5px] font-semibold transition-all active:scale-95;
+  }
+
+  .btn-primary {
+    @apply bg-violet text-[#0c0716];
+  }
+
+  .btn-emerald {
+    @apply bg-emerald text-[#022018];
+  }
+
+  .btn-ghost {
+    @apply border border-white/8 bg-white/5 text-text-hi;
+  }
+
+  .h-title {
+    font-family: var(--font-display);
+    @apply font-semibold;
+  }
+
+  .icon-btn {
+    @apply flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl border border-white/8 bg-white/[0.04] text-text-mid transition-all active:scale-95;
+  }
+
+  .search-box {
+    @apply flex flex-1 items-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-3 py-2.5 text-xs text-text-lo;
+  }
+}
+
+@keyframes heartPop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.28);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 @keyframes slideUp {
@@ -34,4 +113,27 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-heart-pop {
+  animation: heartPop 0.28s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-toast-in {
+  animation: toastIn 0.25s ease-out;
 }
