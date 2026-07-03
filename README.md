@@ -1,8 +1,12 @@
 # FormSecure
 
+P2P ticket escrow marketplace — React frontend + FastAPI backend.
+
+## Frontend
+
 Mobile-first escrow ticket marketplace UI — dark glass aesthetic with emerald trust accents and violet primary actions.
 
-## Features
+### Features
 
 - **Home browse** — phase filter chips, search, predictive gate-price pills, seller tags
 - **Event detail** — phase tabs, fixed-price seller cards, escrow checkout flow
@@ -10,25 +14,40 @@ Mobile-first escrow ticket marketplace UI — dark glass aesthetic with emerald 
 - **Saved tab** — filterable saved events in bottom nav
 - **Responsive** — 1 col mobile → 2 col tablet → 3 col desktop (`sm` / `md` / `lg` / `xl`)
 
-## Stack
+### Frontend stack
 
 - React 19 + TypeScript + Vite
 - Tailwind CSS v4
-- Fonts: Space Grotesk, Inter, JetBrains Mono
 
-## Development
+### Frontend development
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Build
+## Backend
+
+See [`backend/README.md`](backend/README.md) for full setup.
 
 ```bash
-npm run build
-npm run preview
+cd backend
+docker compose up -d          # PostgreSQL
+python3 -m venv .venv
+source .venv/bin/activate     # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env
+alembic upgrade head
+uvicorn app.main:app --reload --port 8000
 ```
+
+Health check: `GET http://127.0.0.1:8000/health`
+
+### Backend stack
+
+- FastAPI + async SQLAlchemy + PostgreSQL
+- Alembic migrations
+- Models: User, Event, TicketPhase, Listing, EscrowTransaction, WishlistItem, WaitlistEntry
 
 ## Design tokens
 
