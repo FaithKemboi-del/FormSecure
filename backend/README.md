@@ -82,6 +82,40 @@ curl http://127.0.0.1:8000/health
 
 API docs: http://127.0.0.1:8000/docs
 
+## Authentication (phone OTP + JWT)
+
+Kenyan phone numbers (`+254` format) authenticate via SMS OTP — no passwords.
+
+| Endpoint | Description |
+|---|---|
+| `POST /api/auth/request-otp` | Send 6-digit OTP (logged to console in dev) |
+| `POST /api/auth/verify-otp` | Verify OTP, create/login user, return tokens |
+| `POST /api/auth/refresh` | Rotate refresh token, issue new access token |
+| `GET /api/me` | Protected profile (Bearer access token) |
+
+### Dev flow
+
+```bash
+# 1. Request OTP
+curl -X POST http://127.0.0.1:8000/api/auth/request-otp \
+  -H "Content-Type: application/json" \
+  -d '{"phone_number": "0712345678"}'
+# Check server console for: [SMS STUB] OTP for +254712345678: 123456
+
+# 2. Verify OTP (new users must include full_name)
+curl -X POST http://127.0.0.1:8000/api/auth/verify-otp \
+  -H "Content-Type: application/json" \
+  -d '{"phone_number": "0712345678", "otp": "123456", "full_name": "Faith K."}'
+
+# 3. Get profile
+curl http://127.0.0.1:8000/api/me \
+  -H "Authorization: Bearer <access_token>"
+```
+
+- OTP expires in **5 minutes**, single-use
+- Access token: **15 minutes**
+- Refresh token: **30 days** (rotated on refresh)
+
 ## Escrow transaction statuses
 
 - `pending` — buyer initiated, payment not yet confirmed
@@ -97,3 +131,5 @@ API docs: http://127.0.0.1:8000/docs
 |---|---|---|
 | `DATABASE_URL` | `postgresql+asyncpg://formsecure:formsecure@localhost:5432/formsecure` | Async SQLAlchemy URL |
 | `DEBUG` | `false` | SQL echo logging |
+| `JWT_SECRET_KEY` | (required in prod) | Signs access/refresh JWTs |
+| `OTP_HMAC_SECRET` | (required in prod) | HMAC key for OTP hashing |
