@@ -177,6 +177,47 @@ Per-site HTML parsers live in `app/services/scraper/parsers.py` as stubs ready t
 - `expired` — 30-minute window passed without verification
 - `refunded` — buyer funds returned after expiry
 
+## M-Pesa / Safaricom Daraja
+
+| Mode | Cost | Use when |
+|---|---|---|
+| `MPESA_MODE=stub` | **Free** | Local dev — simulates STK in the terminal |
+| `MPESA_MODE=daraja` + sandbox | **Free** | Testing real STK prompts with Safaricom test credentials |
+| `MPESA_MODE=daraja` + production | **M-Pesa txn fees only** | Live payments (no separate Daraja subscription) |
+
+### What I can code vs what you must do
+
+The app includes Daraja STK Push + callback handling. **You** must create a Safaricom developer account and paste credentials into `.env` — nobody else can do that step for you.
+
+### Sandbox setup (free)
+
+1. Register at [developer.safaricom.co.ke](https://developer.safaricom.co.ke)
+2. Create an app → copy **Consumer Key** and **Consumer Secret**
+3. Under Lipa na M-Pesa Online → copy **Passkey**; sandbox shortcode is usually `174379`
+4. Expose your local API with **ngrok**: `ngrok http 8000`
+5. Set in `backend/.env`:
+
+```env
+MPESA_MODE=daraja
+MPESA_ENVIRONMENT=sandbox
+MPESA_CONSUMER_KEY=your_key
+MPESA_CONSUMER_SECRET=your_secret
+MPESA_SHORTCODE=174379
+MPESA_PASSKEY=your_passkey
+MPESA_CALLBACK_URL=https://YOUR-NGROK-ID.ngrok.io/api/mpesa/stk-callback
+```
+
+6. Use Safaricom sandbox test phone `254708374149` and PIN `174379` (see their docs)
+
+### Production (real money)
+
+- Register a business PayBill or Till with Safaricom
+- Complete **Go Live** on the developer portal
+- Switch `MPESA_ENVIRONMENT=production` and use your live shortcode/passkey
+- Standard **M-Pesa transaction fees** apply per payment (buyer/seller pays via normal M-Pesa rules) — there is no monthly “Daraja API fee”
+
+Callback URL: `POST /api/mpesa/stk-callback` — Safaricom calls this when the buyer enters their PIN.
+
 ## Environment
 
 | Variable | Default | Description |

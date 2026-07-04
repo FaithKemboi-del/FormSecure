@@ -2,6 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -78,6 +79,27 @@ async def verify_escrow_transfer(
     except EscrowError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return _to_response(transaction, message="Ticket verified. Funds released to seller.")
+
+
+@router.get("/{transaction_id}", response_model=EscrowTransactionResponse)
+async def get_escrow_transaction(
+    transaction_id: UUID,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    buyer: Annotated[User, Depends(get_current_user)],
+) -> EscrowTransactionResponse:
+    result = await session.execute(
+        select(EscrowTransaction).where(
+            EscrowTransaction.id == transaction_id,
+            EscrowTransaction.buyer_id == buyer.id,
+        )
+    )
+    transaction = result.scalar_one_or_none()
+    if transaction is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+    message = None
+    if transaction.status.value == "escrowed" and transaction.transfer_code:
+        message = f"Payment received. Enter code {transaction.transfer_code} after you receive your ticket."
+    return _to_response(transaction, message=message)
 
 
 @router.get("/mine", response_model=EscrowListResponse)

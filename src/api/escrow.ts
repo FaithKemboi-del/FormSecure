@@ -36,6 +36,10 @@ export async function verifyEscrowTransfer(
   })
 }
 
+export async function fetchEscrowTransaction(transactionId: string): Promise<EscrowTransaction> {
+  return apiFetch(`/api/escrow/${transactionId}`)
+}
+
 export async function fetchMyEscrowTransactions(): Promise<{ items: EscrowTransaction[] }> {
   return apiFetch('/api/escrow/mine')
 }

@@ -14,9 +14,10 @@ from app.core.scheduler import (
 from app.services.sample_data import seed_sample_events
 from app.routers.admin import router as admin_router
 from app.routers.auth import admin_users_router, me_router, router as auth_router
-from app.routers.escrow import router as escrow_router
 from app.routers.events import router as events_router
 from app.routers.listings import router as listings_router
+from app.routers.escrow import router as escrow_router
+from app.routers.mpesa import router as mpesa_router
 from app.routers.notifications import router as notifications_router
 from app.routers.waitlist import router as waitlist_router
 
@@ -56,6 +57,7 @@ app.include_router(admin_users_router)
 app.include_router(waitlist_router)
 app.include_router(notifications_router)
 app.include_router(escrow_router)
+app.include_router(mpesa_router)
 
 
 @app.get("/health")

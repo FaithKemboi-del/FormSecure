@@ -25,10 +25,17 @@ class Settings(BaseSettings):
 
     otp_enabled: bool = False
     mpesa_mode: str = "stub"  # stub | daraja
+    mpesa_environment: str = "sandbox"  # sandbox | production
+    mpesa_consumer_key: str = ""
+    mpesa_consumer_secret: str = ""
+    mpesa_shortcode: str = "174379"
+    mpesa_passkey: str = ""
+    mpesa_callback_url: str = ""
+    mpesa_initiator_name: str = ""
+    mpesa_security_credential: str = ""
     escrow_expire_minutes: int = 30
     buyer_service_fee: str = "100.00"
     seller_commission_rate: str = "0.05"
-    mpesa_shortcode: str = "400200"
 
 
 settings = Settings()

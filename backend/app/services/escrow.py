@@ -96,6 +96,37 @@ async def initiate_purchase(
     return transaction
 
 
+async def mark_escrow_paid_from_mpesa(
+    session: AsyncSession,
+    *,
+    checkout_request_id: str,
+    mpesa_receipt_number: str,
+    payer_name: str | None = None,
+) -> EscrowTransaction | None:
+    result = await session.execute(
+        select(EscrowTransaction)
+        .where(
+            EscrowTransaction.mpesa_checkout_request_id == checkout_request_id,
+            EscrowTransaction.status == EscrowTransactionStatus.PENDING,
+        )
+        .options(selectinload(EscrowTransaction.listing), selectinload(EscrowTransaction.buyer))
+    )
+    transaction = result.scalar_one_or_none()
+    if transaction is None:
+        return None
+
+    now = _utcnow()
+    transaction.status = EscrowTransactionStatus.ESCROWED
+    transaction.transfer_code = _generate_transfer_code()
+    transaction.paid_at = now
+    transaction.expires_at = now + timedelta(minutes=settings.escrow_expire_minutes)
+    transaction.mpesa_receipt_number = mpesa_receipt_number
+    if payer_name and transaction.buyer:
+        transaction.buyer.mpesa_registered_name = payer_name
+    await session.flush()
+    return transaction
+
+
 async def confirm_payment(
     session: AsyncSession,
     buyer: User,
@@ -111,6 +142,11 @@ async def confirm_payment(
         raise EscrowError("Transaction not found.")
     if transaction.status != EscrowTransactionStatus.PENDING:
         raise EscrowError("Payment already processed or cancelled.")
+
+    if settings.mpesa_mode == "daraja":
+        raise EscrowError(
+            "Complete the M-Pesa prompt on your phone. Payment confirms automatically within a few seconds."
+        )
 
     mpesa_result = await simulate_stk_success(
         checkout_request_id=transaction.mpesa_checkout_request_id or "",
