@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { fetchEventDetail, fetchEvents } from './api/events'
+import { LoginSheet } from './components/auth/LoginSheet'
 import { EventDetail } from './components/events/EventDetail'
 import { EscrowCheckout } from './components/escrow/EscrowCheckout'
 import { BottomNav } from './components/ui/BottomNav'
@@ -9,12 +11,15 @@ import { ProfileView } from './components/views/ProfileView'
 import { SavedView } from './components/views/SavedView'
 import { SearchView } from './components/views/SearchView'
 import { WalletView } from './components/views/WalletView'
+import { useAuth } from './hooks/useAuth'
 import { useToast } from './hooks/useToast'
 import { useWishlist } from './hooks/useWishlist'
+import { mapEventDetail, mapEventSummary } from './utils/eventMapper'
 import type { Event, NavTab, PhaseFilter, Seller, TicketPhase } from './types/event'
 
 export default function App() {
   const { toast, showToast } = useToast()
+  const { user, loading: authLoading, logout, onLoginSuccess } = useAuth()
   const { isSaved, toggleWishlist, animatingId, savedIds, savedCount } = useWishlist({
     onToggle: showToast,
   })
@@ -23,7 +28,11 @@ export default function App() {
   const [phaseFilter, setPhaseFilter] = useState<PhaseFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
   const [waitlistEvent, setWaitlistEvent] = useState<Event | null>(null)
+  const [loginOpen, setLoginOpen] = useState(false)
+  const [savedEvents, setSavedEvents] = useState<Event[]>([])
+  const [savedLoading, setSavedLoading] = useState(false)
   const [checkoutContext, setCheckoutContext] = useState<{
     event: Event
     phase: TicketPhase
@@ -32,19 +41,72 @@ export default function App() {
 
   const showBottomNav = selectedEvent === null
 
+  const loadSavedEvents = useCallback(async () => {
+    if (savedIds.size === 0) {
+      setSavedEvents([])
+      return
+    }
+
+    setSavedLoading(true)
+    try {
+      const response = await fetchEvents()
+      const events = response.items
+        .map(mapEventSummary)
+        .filter((event) => savedIds.has(event.id))
+      setSavedEvents(events)
+    } catch {
+      setSavedEvents([])
+    } finally {
+      setSavedLoading(false)
+    }
+  }, [savedIds])
+
+  useEffect(() => {
+    if (activeTab === 'saved') {
+      void loadSavedEvents()
+    }
+  }, [activeTab, loadSavedEvents])
+
+  const handleViewEvent = useCallback(
+    async (summary: Event) => {
+      setSelectedEvent(summary)
+      setDetailLoading(true)
+      try {
+        const detail = await fetchEventDetail(summary.id)
+        setSelectedEvent(mapEventDetail(detail))
+      } catch {
+        showToast('Could not load event details')
+      } finally {
+        setDetailLoading(false)
+      }
+    },
+    [showToast],
+  )
+
   const content = useMemo(() => {
     if (selectedEvent) {
       return (
-        <EventDetail
-          event={selectedEvent}
-          isSaved={isSaved(selectedEvent.id)}
-          isAnimating={animatingId === selectedEvent.id}
-          onBack={() => setSelectedEvent(null)}
-          onToggleWishlist={toggleWishlist}
-          onEscrowBuy={(event, phase, seller) => {
-            setCheckoutContext({ event, phase, seller })
-          }}
-        />
+        <>
+          {detailLoading ? (
+            <div className="card py-6 text-center">
+              <p className="text-sm text-text-mid">Loading listings…</p>
+            </div>
+          ) : null}
+          <EventDetail
+            event={selectedEvent}
+            isSaved={isSaved(selectedEvent.id)}
+            isAnimating={animatingId === selectedEvent.id}
+            onBack={() => setSelectedEvent(null)}
+            onToggleWishlist={toggleWishlist}
+            onEscrowBuy={(event, phase, seller) => {
+              if (!user) {
+                setLoginOpen(true)
+                return
+              }
+              setCheckoutContext({ event, phase, seller })
+            }}
+          />
+        </>
       )
     }
 
@@ -59,7 +121,7 @@ export default function App() {
             isSaved={isSaved}
             animatingId={animatingId}
             onToggleWishlist={toggleWishlist}
-            onViewEvent={setSelectedEvent}
+            onViewEvent={(event) => void handleViewEvent(event)}
             onJoinWaitlist={setWaitlistEvent}
           />
         )
@@ -68,29 +130,44 @@ export default function App() {
       case 'saved':
         return (
           <SavedView
-            savedIds={savedIds}
+            savedEvents={savedEvents}
+            loading={savedLoading}
             animatingId={animatingId}
             onToggleWishlist={toggleWishlist}
-            onViewEvent={setSelectedEvent}
+            onViewEvent={(event) => void handleViewEvent(event)}
             onJoinWaitlist={setWaitlistEvent}
           />
         )
       case 'wallet':
         return <WalletView />
       case 'profile':
-        return <ProfileView onOpenSaved={() => setActiveTab('saved')} />
+        return (
+          <ProfileView
+            user={user}
+            loading={authLoading}
+            onOpenSaved={() => setActiveTab('saved')}
+            onLogin={() => setLoginOpen(true)}
+            onLogout={logout}
+          />
+        )
       default:
         return null
     }
   }, [
     activeTab,
     animatingId,
+    authLoading,
+    detailLoading,
+    handleViewEvent,
     isSaved,
+    logout,
     phaseFilter,
-    savedIds,
+    savedEvents,
+    savedLoading,
     searchQuery,
     selectedEvent,
     toggleWishlist,
+    user,
   ])
 
   return (
@@ -118,6 +195,11 @@ export default function App() {
       <Toast message={toast?.message ?? null} />
       <WaitlistSheet event={waitlistEvent} onClose={() => setWaitlistEvent(null)} />
       <EscrowCheckout context={checkoutContext} onClose={() => setCheckoutContext(null)} />
+      <LoginSheet
+        open={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        onSuccess={() => void onLoginSuccess()}
+      />
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { EventCard } from '../events/EventCard'
 import { Icon } from '../icons/Icon'
-import { eventMatchesPhaseFilter, mockEvents } from '../../data/mockEvents'
+import { useEvents } from '../../hooks/useEvents'
 import type { Event, PhaseFilter } from '../../types/event'
 
 const phaseFilters: { id: PhaseFilter; label: string }[] = [
@@ -33,16 +33,7 @@ export function HomeView({
   onViewEvent,
   onJoinWaitlist,
 }: HomeViewProps) {
-  const filteredEvents = mockEvents.filter((event) => {
-    const matchesPhase = eventMatchesPhaseFilter(event, phaseFilter)
-    const query = searchQuery.trim().toLowerCase()
-    const matchesSearch =
-      query.length === 0 ||
-      event.title.toLowerCase().includes(query) ||
-      event.venue.toLowerCase().includes(query) ||
-      event.location.toLowerCase().includes(query)
-    return matchesPhase && matchesSearch
-  })
+  const { events, loading, error, reload } = useEvents({ phaseFilter, searchQuery })
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -87,21 +78,38 @@ export function HomeView({
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {filteredEvents.map((event) => (
-          <EventCard
-            key={event.id}
-            event={event}
-            isSaved={isSaved(event.id)}
-            isAnimating={animatingId === event.id}
-            onToggleWishlist={onToggleWishlist}
-            onView={onViewEvent}
-            onJoinWaitlist={onJoinWaitlist}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="card py-8 text-center">
+          <p className="text-sm text-text-mid">Loading events…</p>
+        </div>
+      ) : null}
 
-      {filteredEvents.length === 0 ? (
+      {error ? (
+        <div className="card py-8 text-center">
+          <p className="text-sm text-danger">{error}</p>
+          <button type="button" onClick={() => void reload()} className="btn btn-ghost mt-3">
+            Try again
+          </button>
+        </div>
+      ) : null}
+
+      {!loading && !error ? (
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {events.map((event) => (
+            <EventCard
+              key={event.id}
+              event={event}
+              isSaved={isSaved(event.id)}
+              isAnimating={animatingId === event.id}
+              onToggleWishlist={onToggleWishlist}
+              onView={onViewEvent}
+              onJoinWaitlist={onJoinWaitlist}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {!loading && !error && events.length === 0 ? (
         <div className="card py-8 text-center">
           <p className="text-sm text-text-mid">No events match your filters.</p>
         </div>
