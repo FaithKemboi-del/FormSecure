@@ -4,6 +4,7 @@ export interface UserProfile {
   id: string
   full_name: string
   phone_number: string
+  email: string | null
   is_verified: boolean
   rating: number | null
 }
@@ -41,4 +42,14 @@ export async function verifyOtp(
 
 export async function fetchMe(): Promise<UserProfile> {
   return apiFetch('/api/me')
+}
+
+export async function updateProfile(body: {
+  full_name?: string
+  email?: string
+}): Promise<UserProfile> {
+  return apiFetch('/api/me', {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
 }

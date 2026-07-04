@@ -20,6 +20,8 @@ interface HomeViewProps {
   onToggleWishlist: (eventId: string) => void
   onViewEvent: (event: Event) => void
   onJoinWaitlist: (event: Event) => void
+  unreadCount?: number
+  onOpenNotifications?: () => void
 }
 
 export function HomeView({
@@ -32,6 +34,8 @@ export function HomeView({
   onToggleWishlist,
   onViewEvent,
   onJoinWaitlist,
+  unreadCount = 0,
+  onOpenNotifications,
 }: HomeViewProps) {
   const { events, loading, error, reload } = useEvents({ phaseFilter, searchQuery })
 
@@ -42,8 +46,18 @@ export function HomeView({
           <p className="font-mono text-[10.5px] uppercase text-text-lo sm:text-xs">NAIROBI · TODAY</p>
           <h1 className="h-title text-lg text-text-hi sm:text-xl lg:text-2xl">Find your ticket</h1>
         </div>
-        <button type="button" aria-label="Notifications" className="icon-btn">
+        <button
+          type="button"
+          aria-label="Notifications"
+          onClick={onOpenNotifications}
+          className="icon-btn relative"
+        >
           <Icon name="bell" size={18} />
+          {unreadCount > 0 ? (
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald px-1 text-[9px] font-bold text-bg">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          ) : null}
         </button>
       </div>
 

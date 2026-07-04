@@ -16,6 +16,8 @@ from app.routers.admin import router as admin_router
 from app.routers.auth import me_router, router as auth_router
 from app.routers.events import router as events_router
 from app.routers.listings import router as listings_router
+from app.routers.notifications import router as notifications_router
+from app.routers.waitlist import router as waitlist_router
 
 
 @asynccontextmanager
@@ -49,6 +51,8 @@ app.include_router(me_router)
 app.include_router(events_router)
 app.include_router(listings_router)
 app.include_router(admin_router)
+app.include_router(waitlist_router)
+app.include_router(notifications_router)
 
 
 @app.get("/health")

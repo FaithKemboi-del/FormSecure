@@ -44,6 +44,7 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     phone_number: Mapped[str] = mapped_column(String(20), unique=True, index=True)
+    email: Mapped[str | None] = mapped_column(String(254), nullable=True, index=True)
     full_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     is_verified: Mapped[bool] = mapped_column(default=False)
     is_admin: Mapped[bool] = mapped_column(default=False)
@@ -65,6 +66,7 @@ class User(Base):
     )
     wishlist_items: Mapped[list["WishlistItem"]] = relationship(back_populates="user")
     waitlist_entries: Mapped[list["WaitlistEntry"]] = relationship(back_populates="user")
+    notifications: Mapped[list["Notification"]] = relationship(back_populates="user")
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(back_populates="user")
 
 
@@ -196,6 +198,8 @@ class WaitlistEntry(Base):
     )
     max_budget: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     contact_number: Mapped[str] = mapped_column(String(20))
+    email: Mapped[str | None] = mapped_column(String(254), nullable=True)
+    notify_via_email: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="waitlist_entries")
@@ -208,6 +212,37 @@ class WaitlistEntry(Base):
             name="uq_waitlist_entries_user_id_ticket_phase_id",
         ),
     )
+
+
+class NotificationType(str, enum.Enum):
+    WAITLIST_MATCH = "waitlist_match"
+    WAITLIST_CONFIRMED = "waitlist_confirmed"
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    notification_type: Mapped[NotificationType] = mapped_column(
+        Enum(NotificationType, name="notification_type"),
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(String(200))
+    body: Mapped[str] = mapped_column(String(1000))
+    event_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("events.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    listing_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("listings.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="notifications")
 
 
 class PhoneOTP(Base):

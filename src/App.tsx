@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchEventDetail, fetchEvents } from './api/events'
 import { LoginSheet } from './components/auth/LoginSheet'
+import { NotificationsSheet } from './components/notifications/NotificationsSheet'
 import { EventDetail } from './components/events/EventDetail'
 import { EscrowCheckout } from './components/escrow/EscrowCheckout'
 import { BottomNav } from './components/ui/BottomNav'
@@ -12,6 +13,7 @@ import { SavedView } from './components/views/SavedView'
 import { SearchView } from './components/views/SearchView'
 import { WalletView } from './components/views/WalletView'
 import { useAuth } from './hooks/useAuth'
+import { useNotifications } from './hooks/useNotifications'
 import { useToast } from './hooks/useToast'
 import { useWishlist } from './hooks/useWishlist'
 import { mapEventDetail, mapEventSummary } from './utils/eventMapper'
@@ -19,7 +21,15 @@ import type { Event, NavTab, PhaseFilter, Seller, TicketPhase } from './types/ev
 
 export default function App() {
   const { toast, showToast } = useToast()
-  const { user, loading: authLoading, logout, onLoginSuccess } = useAuth()
+  const { user, loading: authLoading, logout, onLoginSuccess, refreshUser } = useAuth()
+  const {
+    notifications,
+    unreadCount,
+    loading: notificationsLoading,
+    reload: reloadNotifications,
+    markRead,
+    markAllRead,
+  } = useNotifications(Boolean(user))
   const { isSaved, toggleWishlist, animatingId, savedIds, savedCount } = useWishlist({
     onToggle: showToast,
   })
@@ -31,6 +41,7 @@ export default function App() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [waitlistEvent, setWaitlistEvent] = useState<Event | null>(null)
   const [loginOpen, setLoginOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [savedEvents, setSavedEvents] = useState<Event[]>([])
   const [savedLoading, setSavedLoading] = useState(false)
   const [checkoutContext, setCheckoutContext] = useState<{
@@ -83,6 +94,25 @@ export default function App() {
     [showToast],
   )
 
+  const handleJoinWaitlist = useCallback(
+    (event: Event) => {
+      if (!user) {
+        setLoginOpen(true)
+        return
+      }
+      setWaitlistEvent(event)
+    },
+    [user],
+  )
+
+  const handleOpenNotifications = useCallback(() => {
+    if (!user) {
+      setLoginOpen(true)
+      return
+    }
+    setNotificationsOpen(true)
+  }, [user])
+
   const content = useMemo(() => {
     if (selectedEvent) {
       return (
@@ -122,7 +152,9 @@ export default function App() {
             animatingId={animatingId}
             onToggleWishlist={toggleWishlist}
             onViewEvent={(event) => void handleViewEvent(event)}
-            onJoinWaitlist={setWaitlistEvent}
+            onJoinWaitlist={handleJoinWaitlist}
+            unreadCount={unreadCount}
+            onOpenNotifications={handleOpenNotifications}
           />
         )
       case 'search':
@@ -135,7 +167,7 @@ export default function App() {
             animatingId={animatingId}
             onToggleWishlist={toggleWishlist}
             onViewEvent={(event) => void handleViewEvent(event)}
-            onJoinWaitlist={setWaitlistEvent}
+            onJoinWaitlist={handleJoinWaitlist}
           />
         )
       case 'wallet':
@@ -148,6 +180,7 @@ export default function App() {
             onOpenSaved={() => setActiveTab('saved')}
             onLogin={() => setLoginOpen(true)}
             onLogout={logout}
+            onProfileUpdated={() => void refreshUser()}
           />
         )
       default:
@@ -158,6 +191,8 @@ export default function App() {
     animatingId,
     authLoading,
     detailLoading,
+    handleJoinWaitlist,
+    handleOpenNotifications,
     handleViewEvent,
     isSaved,
     logout,
@@ -167,7 +202,9 @@ export default function App() {
     searchQuery,
     selectedEvent,
     toggleWishlist,
+    unreadCount,
     user,
+    refreshUser,
   ])
 
   return (
@@ -193,12 +230,36 @@ export default function App() {
       ) : null}
 
       <Toast message={toast?.message ?? null} />
-      <WaitlistSheet event={waitlistEvent} onClose={() => setWaitlistEvent(null)} />
+      <WaitlistSheet
+        event={waitlistEvent}
+        user={user}
+        onClose={() => setWaitlistEvent(null)}
+        onLoginRequired={() => {
+          setWaitlistEvent(null)
+          setLoginOpen(true)
+        }}
+        onSuccess={(message) => {
+          showToast(message)
+          void reloadNotifications()
+        }}
+      />
+      <NotificationsSheet
+        open={notificationsOpen}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        loading={notificationsLoading}
+        onClose={() => setNotificationsOpen(false)}
+        onMarkRead={(notificationId) => void markRead(notificationId)}
+        onMarkAllRead={() => void markAllRead()}
+      />
       <EscrowCheckout context={checkoutContext} onClose={() => setCheckoutContext(null)} />
       <LoginSheet
         open={loginOpen}
         onClose={() => setLoginOpen(false)}
-        onSuccess={() => void onLoginSuccess()}
+        onSuccess={() => {
+          void onLoginSuccess()
+          void reloadNotifications()
+        }}
       />
     </div>
   )

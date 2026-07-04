@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react'
+import { updateProfile, type UserProfile } from '../../api/auth'
 import { Icon } from '../icons/Icon'
-import type { UserProfile } from '../../api/auth'
 
 interface ProfileViewProps {
   user: UserProfile | null
@@ -7,6 +8,7 @@ interface ProfileViewProps {
   onOpenSaved: () => void
   onLogin: () => void
   onLogout: () => void
+  onProfileUpdated: () => void
 }
 
 function maskPhone(phone: string): string {
@@ -27,7 +29,30 @@ export function ProfileView({
   onOpenSaved,
   onLogin,
   onLogout,
+  onProfileUpdated,
 }: ProfileViewProps) {
+  const [email, setEmail] = useState('')
+  const [savingEmail, setSavingEmail] = useState(false)
+  const [emailMessage, setEmailMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    setEmail(user?.email ?? '')
+  }, [user?.email])
+
+  async function handleSaveEmail() {
+    if (!user) return
+    setSavingEmail(true)
+    setEmailMessage(null)
+    try {
+      await updateProfile({ email: email.trim() || undefined })
+      setEmailMessage('Email saved for alerts.')
+      onProfileUpdated()
+    } catch (err) {
+      setEmailMessage(err instanceof Error ? err.message : 'Could not save email')
+    } finally {
+      setSavingEmail(false)
+    }
+  }
   const menuItems = [
     { icon: 'ticket' as const, label: 'My listed tickets' },
     { icon: 'heart' as const, label: 'Saved events', action: onOpenSaved },
@@ -81,6 +106,29 @@ export function ProfileView({
             {maskPhone(user.phone_number)} · {user.is_verified ? 'Verified' : 'Unverified'}
           </div>
         </div>
+      </div>
+
+      <div className="card space-y-2">
+        <span className="block font-mono text-[10px] text-text-lo">EMAIL FOR ALERTS</span>
+        <div className="search-box justify-start text-sm">
+          <Icon name="user" size={14} className="text-text-lo" />
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@email.com"
+            className="w-full bg-transparent text-text-hi outline-none placeholder:text-text-lo"
+          />
+        </div>
+        <button
+          type="button"
+          disabled={savingEmail}
+          onClick={() => void handleSaveEmail()}
+          className="btn btn-ghost w-full text-xs disabled:opacity-60"
+        >
+          Save email
+        </button>
+        {emailMessage ? <p className="text-xs text-text-mid">{emailMessage}</p> : null}
       </div>
 
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
