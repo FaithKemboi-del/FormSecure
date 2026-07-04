@@ -7,7 +7,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import settings
-from app.core.database import Base
+from app.core.database import ASYNCPG_CONNECT_ARGS, Base
 from app.models import (  # noqa: F401
     EscrowTransaction,
     Event,
@@ -56,6 +56,7 @@ async def run_async_migrations() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=ASYNCPG_CONNECT_ARGS,
     )
 
     async with connectable.connect() as connection:

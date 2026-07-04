@@ -19,10 +19,14 @@ class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=naming_convention)
 
 
+# Supabase transaction pooler (PgBouncer) requires prepared statement cache disabled.
+ASYNCPG_CONNECT_ARGS = {"statement_cache_size": 0, "prepared_statement_cache_size": 0}
+
 engine = create_async_engine(
     settings.database_url,
     echo=settings.debug,
     pool_pre_ping=True,
+    connect_args=ASYNCPG_CONNECT_ARGS,
 )
 
 AsyncSessionLocal = async_sessionmaker(

@@ -133,3 +133,7 @@ curl http://127.0.0.1:8000/api/me \
 | `DEBUG` | `false` | SQL echo logging |
 | `JWT_SECRET_KEY` | (required in prod) | Signs access/refresh JWTs |
 | `OTP_HMAC_SECRET` | (required in prod) | HMAC key for OTP hashing |
+
+### Supabase pooler note
+
+If using Supabase **transaction pooler** (port `6543`), the app disables asyncpg prepared statement caching automatically. This avoids `DuplicatePreparedStatementError` from PgBouncer.
