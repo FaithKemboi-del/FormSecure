@@ -23,5 +23,12 @@ class Settings(BaseSettings):
     otp_expire_minutes: int = 5
     otp_hmac_secret: str = "change-me-otp-secret"
 
+    otp_enabled: bool = False
+    mpesa_mode: str = "stub"  # stub | daraja
+    escrow_expire_minutes: int = 30
+    buyer_service_fee: str = "100.00"
+    seller_commission_rate: str = "0.05"
+    mpesa_shortcode: str = "400200"
+
 
 settings = Settings()

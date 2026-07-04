@@ -18,6 +18,7 @@ from app.models import (  # noqa: F401
     ScraperSource,
     TicketPhase,
     User,
+    VerificationStatus,
     WaitlistEntry,
     WishlistItem,
 )

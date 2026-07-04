@@ -12,6 +12,7 @@ from app.models import (
     ListingStatus,
     TicketPhase,
     User,
+    VerificationStatus,
 )
 from app.schemas.listings import ListingCreateResponse, ListingMineListResponse, ListingMineResponse
 from app.services.pricing import max_allowed_listing_price, min_allowed_listing_price
@@ -37,6 +38,9 @@ async def create_listing(
     asking_price,
     external_ticket_identifier: str,
 ) -> ListingCreateResponse:
+    if seller.verification_status != VerificationStatus.VERIFIED:
+        raise ListingError("Your account is pending manual verification.")
+
     phase_result = await session.execute(
         select(TicketPhase)
         .where(TicketPhase.id == phase_id)

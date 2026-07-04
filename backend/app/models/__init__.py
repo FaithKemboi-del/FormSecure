@@ -39,6 +39,13 @@ class TicketPhaseStatus(str, enum.Enum):
     SOLD_OUT = "sold_out"
 
 
+class VerificationStatus(str, enum.Enum):
+    PENDING = "pending"
+    VERIFIED = "verified"
+    NEEDS_MORE_INFO = "needs_more_info"
+    REJECTED = "rejected"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -46,8 +53,18 @@ class User(Base):
     phone_number: Mapped[str] = mapped_column(String(20), unique=True, index=True)
     email: Mapped[str | None] = mapped_column(String(254), nullable=True, index=True)
     full_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    verification_status: Mapped[VerificationStatus] = mapped_column(
+        Enum(VerificationStatus, name="verification_status"),
+        default=VerificationStatus.PENDING,
+        index=True,
+    )
     is_verified: Mapped[bool] = mapped_column(default=False)
+    is_blocked: Mapped[bool] = mapped_column(default=False)
     is_admin: Mapped[bool] = mapped_column(default=False)
+    blocked_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    verification_notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    mpesa_registered_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -161,6 +178,8 @@ class EscrowTransaction(Base):
         index=True,
     )
     transfer_code: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    mpesa_checkout_request_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    mpesa_receipt_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

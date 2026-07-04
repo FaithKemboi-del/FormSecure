@@ -90,6 +90,13 @@ export function ProfileView({
 
   return (
     <div className="space-y-4">
+      {user && user.verification_status !== 'verified' ? (
+        <div className="card border-amber/25 bg-amber/10 text-sm text-amber">
+          Manual verification pending — you can browse events, but buying and selling unlocks once we
+          approve your account (usually a few hours).
+        </div>
+      ) : null}
+
       <div className="flex items-center gap-3">
         <div
           className="flex h-[52px] w-[52px] items-center justify-center rounded-full text-base font-bold text-bg"

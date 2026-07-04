@@ -41,6 +41,18 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     is_new_user: bool = False
+    verification_status: str | None = None
+
+
+class SignupBody(BaseModel):
+    phone_number: str
+    full_name: str = Field(..., min_length=2, max_length=120)
+    accept_terms: bool
+
+
+class LoginBody(BaseModel):
+    phone_number: str
+    accept_terms: bool = True
 
 
 class MessageResponse(BaseModel):
@@ -53,7 +65,9 @@ class UserProfileResponse(BaseModel):
     full_name: str
     phone_number: str
     email: str | None
+    verification_status: str
     is_verified: bool
+    is_blocked: bool
     rating: float | None
 
     model_config = {"from_attributes": True}

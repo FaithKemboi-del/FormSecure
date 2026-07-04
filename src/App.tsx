@@ -252,7 +252,16 @@ export default function App() {
         onMarkRead={(notificationId) => void markRead(notificationId)}
         onMarkAllRead={() => void markAllRead()}
       />
-      <EscrowCheckout context={checkoutContext} onClose={() => setCheckoutContext(null)} />
+      <EscrowCheckout
+        context={checkoutContext}
+        user={user}
+        onClose={() => setCheckoutContext(null)}
+        onComplete={showToast}
+        onLoginRequired={() => {
+          setCheckoutContext(null)
+          setLoginOpen(true)
+        }}
+      />
       <LoginSheet
         open={loginOpen}
         onClose={() => setLoginOpen(false)}
