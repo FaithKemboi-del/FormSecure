@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.utils.phone import PhoneNumberError, normalize_kenyan_phone
 
@@ -52,7 +52,13 @@ class UserProfileResponse(BaseModel):
     id: UUID
     full_name: str
     phone_number: str
+    email: str | None
     is_verified: bool
     rating: float | None
 
     model_config = {"from_attributes": True}
+
+
+class UpdateProfileBody(BaseModel):
+    full_name: str | None = Field(default=None, max_length=120)
+    email: EmailStr | None = None

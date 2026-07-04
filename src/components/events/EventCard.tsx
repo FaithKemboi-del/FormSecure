@@ -1,5 +1,5 @@
 import { Icon } from '../icons/Icon'
-import { getFeaturedPhase } from '../../data/mockEvents'
+import { getFeaturedPhase } from '../../utils/eventMapper'
 import type { Event } from '../../types/event'
 import { formatKSh, savingsPercent } from '../../utils/currency'
 

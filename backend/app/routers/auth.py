@@ -12,9 +12,11 @@ from app.schemas.auth import (
     RefreshTokenBody,
     RequestOTPBody,
     TokenResponse,
+    UpdateProfileBody,
     UserProfileResponse,
     VerifyOTPBody,
 )
+from app.services.email import EmailError, normalize_email
 from app.services.auth import TokenError, create_access_token, issue_refresh_token, validate_refresh_token
 from app.services.otp import OTPError, request_otp, verify_otp_and_get_or_create_user
 from app.utils.phone import mask_phone
@@ -92,6 +94,33 @@ async def get_me(
         id=current_user.id,
         full_name=current_user.full_name or "",
         phone_number=current_user.phone_number,
+        email=current_user.email,
+        is_verified=current_user.is_verified,
+        rating=float(rating) if rating is not None else None,
+    )
+
+
+@me_router.patch("/me", response_model=UserProfileResponse)
+async def update_me(
+    body: UpdateProfileBody,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> UserProfileResponse:
+    if body.full_name is not None:
+        current_user.full_name = body.full_name.strip()
+    if body.email is not None:
+        try:
+            current_user.email = normalize_email(str(body.email))
+        except EmailError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    await session.flush()
+    rating = await get_seller_rating(session, current_user.id)
+    return UserProfileResponse(
+        id=current_user.id,
+        full_name=current_user.full_name or "",
+        phone_number=current_user.phone_number,
+        email=current_user.email,
         is_verified=current_user.is_verified,
         rating=float(rating) if rating is not None else None,
     )
