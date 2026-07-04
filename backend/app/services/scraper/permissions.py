@@ -3,9 +3,11 @@ import re
 from datetime import UTC, datetime
 from urllib.parse import urljoin
 from urllib.robotparser import RobotFileParser
+from uuid import uuid4
 
 import httpx
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import RobotsTxtStatus, ScraperSource, TosStatus
@@ -32,20 +34,22 @@ async def seed_scraper_sources(session: AsyncSession) -> None:
         ("gigs.madfun.com", "https://gigs.madfun.com"),
     ]
     for site_name, base_url in defaults:
-        existing = await session.execute(
-            select(ScraperSource).where(ScraperSource.site_name == site_name)
-        )
-        if existing.scalar_one_or_none() is None:
-            session.add(
-                ScraperSource(
-                    site_name=site_name,
-                    base_url=base_url,
-                    robots_txt_status=RobotsTxtStatus.UNCLEAR,
-                    tos_status=TosStatus.UNCLEAR,
-                    is_currently_approved=False,
-                )
+        stmt = (
+            insert(ScraperSource)
+            .values(
+                id=uuid4(),
+                site_name=site_name,
+                base_url=base_url,
+                robots_txt_status=RobotsTxtStatus.UNCLEAR,
+                tos_status=TosStatus.UNCLEAR,
+                has_public_api=False,
+                is_currently_approved=False,
             )
+            .on_conflict_do_nothing(index_elements=["site_name"])
+        )
+        await session.execute(stmt)
     await session.commit()
+    logger.info("Scraper source seed completed (skips sites that already exist).")
 
 
 async def _fetch_text(client: httpx.AsyncClient, url: str) -> str | None:
