@@ -17,9 +17,9 @@ backend/
 ├── app/
 │   ├── core/          # config, async DB engine/session
 │   ├── models/        # SQLAlchemy models
-│   ├── routers/       # API routes (empty for now)
-│   ├── schemas/       # Pydantic schemas (empty for now)
-│   ├── services/      # business logic (empty for now)
+│   ├── routers/       # API routes (auth, etc.)
+│   ├── schemas/       # Pydantic request/response models
+│   ├── services/      # OTP, JWT, SMS stub
 │   └── main.py        # FastAPI app + /health
 ├── alembic/           # migrations
 ├── docker-compose.yml # local PostgreSQL
