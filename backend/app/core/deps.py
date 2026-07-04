@@ -1,14 +1,12 @@
-from decimal import Decimal
 from typing import Annotated
-from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models import EscrowTransaction, EscrowTransactionStatus, User
+from app.models import User
 from app.services.auth import TokenError, decode_access_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -47,15 +45,12 @@ async def get_current_user(
     return user
 
 
-async def compute_user_rating(session: AsyncSession, user_id: UUID) -> Decimal | None:
-    """Placeholder until a ratings table exists — derived from completed transactions count."""
-    result = await session.execute(
-        select(func.count(EscrowTransaction.id)).where(
-            EscrowTransaction.seller_id == user_id,
-            EscrowTransaction.status == EscrowTransactionStatus.RELEASED,
+async def get_admin_user(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
         )
-    )
-    completed_sales = result.scalar_one()
-    if completed_sales == 0:
-        return None
-    return None
+    return current_user

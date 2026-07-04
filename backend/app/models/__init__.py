@@ -46,6 +46,7 @@ class User(Base):
     phone_number: Mapped[str] = mapped_column(String(20), unique=True, index=True)
     full_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     is_verified: Mapped[bool] = mapped_column(default=False)
+    is_admin: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -74,12 +75,22 @@ class Event(Base):
     title: Mapped[str] = mapped_column(String(200))
     venue: Mapped[str] = mapped_column(String(200))
     location: Mapped[str] = mapped_column(String(120))
-    event_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    event_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    source_site: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
+    external_event_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     phases: Mapped[list["TicketPhase"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     wishlist_items: Mapped[list["WishlistItem"]] = relationship(back_populates="event")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "source_site",
+            "external_event_id",
+            name="uq_events_source_site_external_event_id",
+        ),
+    )
 
 
 class TicketPhase(Base):
@@ -90,6 +101,7 @@ class TicketPhase(Base):
     name: Mapped[str] = mapped_column(String(120))
     slug: Mapped[str] = mapped_column(String(80))
     face_value: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    estimated_gate_value: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     status: Mapped[TicketPhaseStatus] = mapped_column(
         Enum(TicketPhaseStatus, name="ticket_phase_status"),
         default=TicketPhaseStatus.AVAILABLE,
@@ -220,3 +232,37 @@ class RefreshToken(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="refresh_tokens")
+
+
+class RobotsTxtStatus(str, enum.Enum):
+    ALLOWED = "allowed"
+    DISALLOWED = "disallowed"
+    UNCLEAR = "unclear"
+
+
+class TosStatus(str, enum.Enum):
+    PROHIBITS_SCRAPING = "prohibits_scraping"
+    SILENT = "silent"
+    ALLOWS = "allows"
+    UNCLEAR = "unclear"
+
+
+class ScraperSource(Base):
+    __tablename__ = "scraper_sources"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    site_name: Mapped[str] = mapped_column(String(120), unique=True)
+    base_url: Mapped[str] = mapped_column(String(500))
+    robots_txt_status: Mapped[RobotsTxtStatus] = mapped_column(
+        Enum(RobotsTxtStatus, name="robots_txt_status"),
+        default=RobotsTxtStatus.UNCLEAR,
+    )
+    tos_status: Mapped[TosStatus] = mapped_column(
+        Enum(TosStatus, name="tos_status"),
+        default=TosStatus.UNCLEAR,
+    )
+    has_public_api: Mapped[bool] = mapped_column(default=False)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_currently_approved: Mapped[bool] = mapped_column(default=False)
+    notes: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

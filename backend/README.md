@@ -17,9 +17,9 @@ backend/
 ├── app/
 │   ├── core/          # config, async DB engine/session
 │   ├── models/        # SQLAlchemy models
-│   ├── routers/       # API routes (auth, etc.)
+│   ├── routers/       # API routes (auth, events, listings, admin)
 │   ├── schemas/       # Pydantic request/response models
-│   ├── services/      # OTP, JWT, SMS stub
+│   ├── services/      # OTP, JWT, events, listings, scraper jobs
 │   └── main.py        # FastAPI app + /health
 ├── alembic/           # migrations
 ├── docker-compose.yml # local PostgreSQL
@@ -30,13 +30,14 @@ backend/
 
 | Model | Purpose |
 |---|---|
-| `User` | Buyers and sellers (same user type) |
-| `Event` | Marketplace events |
-| `TicketPhase` | Phase tiers per event (Early Bird, VIP, etc.) with face value |
+| `User` | Buyers and sellers (same user type); `is_admin` for admin routes |
+| `Event` | Marketplace events (`source_site` + `external_event_id` for scraper dedup) |
+| `TicketPhase` | Phase tiers per event (Early Bird, VIP, etc.) with face value and optional `estimated_gate_value` |
 | `Listing` | Seller ticket for sale linked to a phase |
 | `EscrowTransaction` | Escrow lifecycle: pending → escrowed → verified → released, or expired → refunded |
 | `WishlistItem` | Saved events per user |
 | `WaitlistEntry` | Sold-out phase alerts with max budget + contact number |
+| `ScraperSource` | Ticketing sites tracked for legal scraping permission |
 
 ## Local setup
 
@@ -115,6 +116,57 @@ curl http://127.0.0.1:8000/api/me \
 - OTP expires in **5 minutes**, single-use
 - Access token: **15 minutes**
 - Refresh token: **30 days** (rotated on refresh)
+
+## Events & listings
+
+Browse events and manage seller listings. Listings are fixed-price only (no auctions), capped at face value + 20%.
+
+| Endpoint | Auth | Description |
+|---|---|---|
+| `GET /api/events` | Public | List events with filters: `location`, `date_from`, `date_to`, `phase_slug`, `phase_available`, `min_price`, `max_price` |
+| `GET /api/events/{id}` | Public | Event detail with active listings grouped by phase; each listing shows seller name/rating, price, and savings vs. gate price |
+| `POST /api/listings` | Bearer | Create listing: `event_id`, `phase_id`, `asking_price`, `external_ticket_identifier` (phone/email on external platform). Rejects if price > face value × 1.2 |
+| `GET /api/listings/mine` | Bearer | Seller's active and past listings |
+| `DELETE /api/listings/{id}` | Bearer | Cancel own listing (blocked if an in-progress escrow transaction exists) |
+
+Gate price defaults to `estimated_gate_value` on the phase, or face value × 1.35 when unset.
+
+### Create a listing
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/listings \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "<uuid>",
+    "phase_id": "<uuid>",
+    "asking_price": "3500.00",
+    "external_ticket_identifier": "faith@email.com"
+  }'
+```
+
+## Scraper permission tracking & ingestion
+
+On startup the API seeds six Kenyan ticketing sources (all `is_currently_approved=false` until checked), runs an immediate robots.txt + Terms of Service permission check, then schedules:
+
+- **Monthly** (1st of month, 02:00 UTC) — re-check robots.txt and ToS for every `ScraperSource`
+- **Nightly** (03:00 UTC) — scrape approved sources only; parser stubs return empty until sites are approved and implemented
+
+Approval requires `robots_txt_status=allowed` **and** `tos_status≠prohibits_scraping`. If a site flips from approved to blocked, the server logs:
+
+`ALERT: scraping permission revoked for {site_name}, disabling scraper`
+
+| Endpoint | Auth | Description |
+|---|---|---|
+| `GET /api/admin/scraper-sources` | Admin Bearer | Current approval status for all scraper sources |
+
+Set a user as admin in the database:
+
+```sql
+UPDATE users SET is_admin = true WHERE phone_number = '+254712345678';
+```
+
+Per-site HTML parsers live in `app/services/scraper/parsers.py` as stubs ready to fill in once a source is approved.
 
 ## Escrow transaction statuses
 
