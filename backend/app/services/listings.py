@@ -12,9 +12,11 @@ from app.models import (
     ListingStatus,
     TicketPhase,
     User,
+    VerificationStatus,
 )
 from app.schemas.listings import ListingCreateResponse, ListingMineListResponse, ListingMineResponse
 from app.services.pricing import max_allowed_listing_price, min_allowed_listing_price
+from app.services.waitlist import notify_waitlist_for_new_listing
 
 IN_PROGRESS_ESCROW_STATUSES = {
     EscrowTransactionStatus.PENDING,
@@ -36,6 +38,9 @@ async def create_listing(
     asking_price,
     external_ticket_identifier: str,
 ) -> ListingCreateResponse:
+    if seller.verification_status != VerificationStatus.VERIFIED:
+        raise ListingError("Your account is pending manual verification.")
+
     phase_result = await session.execute(
         select(TicketPhase)
         .where(TicketPhase.id == phase_id)
@@ -62,6 +67,15 @@ async def create_listing(
     )
     session.add(listing)
     await session.flush()
+
+    await notify_waitlist_for_new_listing(
+        session,
+        listing_id=listing.id,
+        phase_id=phase.id,
+        event=phase.event,
+        phase_name=phase.name,
+        asking_price=listing.asking_price,
+    )
 
     return ListingCreateResponse(
         id=listing.id,

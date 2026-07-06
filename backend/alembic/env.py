@@ -12,11 +12,13 @@ from app.models import (  # noqa: F401
     EscrowTransaction,
     Event,
     Listing,
+    Notification,
     PhoneOTP,
     RefreshToken,
     ScraperSource,
     TicketPhase,
     User,
+    VerificationStatus,
     WaitlistEntry,
     WishlistItem,
 )

@@ -2,8 +2,10 @@ import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 from app.core.database import AsyncSessionLocal
+from app.services.escrow import expire_stale_transactions
 from app.services.scraper.ingestion import ingest_scraped_events
 from app.services.scraper.permissions import check_scraper_permissions, seed_scraper_sources
 
@@ -30,6 +32,18 @@ async def _run_scraper_ingestion() -> None:
             await session.rollback()
 
 
+async def _run_escrow_expiry() -> None:
+    async with AsyncSessionLocal() as session:
+        try:
+            count = await expire_stale_transactions(session)
+            await session.commit()
+            if count:
+                logger.info("Expired and refunded %s escrow transactions", count)
+        except Exception:
+            logger.exception("Escrow expiry job failed")
+            await session.rollback()
+
+
 async def bootstrap_scraper_sources() -> None:
     async with AsyncSessionLocal() as session:
         await seed_scraper_sources(session)
@@ -53,6 +67,13 @@ def start_scheduler() -> None:
         _run_scraper_ingestion,
         trigger=CronTrigger(hour=3, minute=0),
         id="nightly_scraper_ingestion",
+        replace_existing=True,
+    )
+
+    scheduler.add_job(
+        _run_escrow_expiry,
+        trigger=IntervalTrigger(minutes=5),
+        id="escrow_expiry_check",
         replace_existing=True,
     )
 

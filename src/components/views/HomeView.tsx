@@ -1,6 +1,6 @@
 import { EventCard } from '../events/EventCard'
 import { Icon } from '../icons/Icon'
-import { eventMatchesPhaseFilter, mockEvents } from '../../data/mockEvents'
+import { useEvents } from '../../hooks/useEvents'
 import type { Event, PhaseFilter } from '../../types/event'
 
 const phaseFilters: { id: PhaseFilter; label: string }[] = [
@@ -20,6 +20,8 @@ interface HomeViewProps {
   onToggleWishlist: (eventId: string) => void
   onViewEvent: (event: Event) => void
   onJoinWaitlist: (event: Event) => void
+  unreadCount?: number
+  onOpenNotifications?: () => void
 }
 
 export function HomeView({
@@ -32,17 +34,10 @@ export function HomeView({
   onToggleWishlist,
   onViewEvent,
   onJoinWaitlist,
+  unreadCount = 0,
+  onOpenNotifications,
 }: HomeViewProps) {
-  const filteredEvents = mockEvents.filter((event) => {
-    const matchesPhase = eventMatchesPhaseFilter(event, phaseFilter)
-    const query = searchQuery.trim().toLowerCase()
-    const matchesSearch =
-      query.length === 0 ||
-      event.title.toLowerCase().includes(query) ||
-      event.venue.toLowerCase().includes(query) ||
-      event.location.toLowerCase().includes(query)
-    return matchesPhase && matchesSearch
-  })
+  const { events, loading, error, reload } = useEvents({ phaseFilter, searchQuery })
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -51,8 +46,18 @@ export function HomeView({
           <p className="font-mono text-[10.5px] uppercase text-text-lo sm:text-xs">NAIROBI · TODAY</p>
           <h1 className="h-title text-lg text-text-hi sm:text-xl lg:text-2xl">Find your ticket</h1>
         </div>
-        <button type="button" aria-label="Notifications" className="icon-btn">
+        <button
+          type="button"
+          aria-label="Notifications"
+          onClick={onOpenNotifications}
+          className="icon-btn relative"
+        >
           <Icon name="bell" size={18} />
+          {unreadCount > 0 ? (
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald px-1 text-[9px] font-bold text-bg">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          ) : null}
         </button>
       </div>
 
@@ -87,21 +92,38 @@ export function HomeView({
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {filteredEvents.map((event) => (
-          <EventCard
-            key={event.id}
-            event={event}
-            isSaved={isSaved(event.id)}
-            isAnimating={animatingId === event.id}
-            onToggleWishlist={onToggleWishlist}
-            onView={onViewEvent}
-            onJoinWaitlist={onJoinWaitlist}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="card py-8 text-center">
+          <p className="text-sm text-text-mid">Loading events…</p>
+        </div>
+      ) : null}
 
-      {filteredEvents.length === 0 ? (
+      {error ? (
+        <div className="card py-8 text-center">
+          <p className="text-sm text-danger">{error}</p>
+          <button type="button" onClick={() => void reload()} className="btn btn-ghost mt-3">
+            Try again
+          </button>
+        </div>
+      ) : null}
+
+      {!loading && !error ? (
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {events.map((event) => (
+            <EventCard
+              key={event.id}
+              event={event}
+              isSaved={isSaved(event.id)}
+              isAnimating={animatingId === event.id}
+              onToggleWishlist={onToggleWishlist}
+              onView={onViewEvent}
+              onJoinWaitlist={onJoinWaitlist}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {!loading && !error && events.length === 0 ? (
         <div className="card py-8 text-center">
           <p className="text-sm text-text-mid">No events match your filters.</p>
         </div>

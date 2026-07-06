@@ -1,10 +1,58 @@
+import { useEffect, useState } from 'react'
+import { updateProfile, type UserProfile } from '../../api/auth'
 import { Icon } from '../icons/Icon'
 
 interface ProfileViewProps {
+  user: UserProfile | null
+  loading: boolean
   onOpenSaved: () => void
+  onLogin: () => void
+  onLogout: () => void
+  onProfileUpdated: () => void
 }
 
-export function ProfileView({ onOpenSaved }: ProfileViewProps) {
+function maskPhone(phone: string): string {
+  if (phone.length < 8) return phone
+  return `${phone.slice(0, 5)}•••${phone.slice(-3)}`
+}
+
+function initials(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+}
+
+export function ProfileView({
+  user,
+  loading,
+  onOpenSaved,
+  onLogin,
+  onLogout,
+  onProfileUpdated,
+}: ProfileViewProps) {
+  const [email, setEmail] = useState('')
+  const [savingEmail, setSavingEmail] = useState(false)
+  const [emailMessage, setEmailMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    setEmail(user?.email ?? '')
+  }, [user?.email])
+
+  async function handleSaveEmail() {
+    if (!user) return
+    setSavingEmail(true)
+    setEmailMessage(null)
+    try {
+      await updateProfile({ email: email.trim() || undefined })
+      setEmailMessage('Email saved for alerts.')
+      onProfileUpdated()
+    } catch (err) {
+      setEmailMessage(err instanceof Error ? err.message : 'Could not save email')
+    } finally {
+      setSavingEmail(false)
+    }
+  }
   const menuItems = [
     { icon: 'ticket' as const, label: 'My listed tickets' },
     { icon: 'heart' as const, label: 'Saved events', action: onOpenSaved },
@@ -12,8 +60,43 @@ export function ProfileView({ onOpenSaved }: ProfileViewProps) {
     { icon: 'shield' as const, label: 'Security & PIN' },
   ]
 
+  if (loading) {
+    return (
+      <div className="card py-10 text-center">
+        <p className="text-sm text-text-mid">Loading profile…</p>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <p className="font-mono text-[10.5px] uppercase text-text-lo sm:text-xs">ACCOUNT</p>
+          <h1 className="h-title text-lg text-text-hi sm:text-xl lg:text-2xl">Your profile</h1>
+        </div>
+        <div className="card flex flex-col items-center gap-3 py-10 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-dim">
+            <Icon name="user" size={20} className="text-violet" />
+          </div>
+          <p className="text-sm text-text-mid">Log in with your phone number to list tickets and track purchases.</p>
+          <button type="button" onClick={onLogin} className="btn btn-emerald mt-1">
+            Log in with phone
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
+      {user && user.verification_status !== 'verified' ? (
+        <div className="card border-amber/25 bg-amber/10 text-sm text-amber">
+          Manual verification pending — you can browse events, but buying and selling unlocks once we
+          approve your account (usually a few hours).
+        </div>
+      ) : null}
+
       <div className="flex items-center gap-3">
         <div
           className="flex h-[52px] w-[52px] items-center justify-center rounded-full text-base font-bold text-bg"
@@ -22,19 +105,44 @@ export function ProfileView({ onOpenSaved }: ProfileViewProps) {
             fontFamily: 'var(--font-display)',
           }}
         >
-          MW
+          {initials(user.full_name || 'User')}
         </div>
         <div>
-          <div className="h-title text-[15px] sm:text-base">Mwangi W.</div>
-          <div className="font-mono text-[10.5px] text-text-lo sm:text-xs">07XX ••• 234 · Verified</div>
+          <div className="h-title text-[15px] sm:text-base">{user.full_name || 'User'}</div>
+          <div className="font-mono text-[10.5px] text-text-lo sm:text-xs">
+            {maskPhone(user.phone_number)} · {user.is_verified ? 'Verified' : 'Unverified'}
+          </div>
         </div>
+      </div>
+
+      <div className="card space-y-2">
+        <span className="block font-mono text-[10px] text-text-lo">EMAIL FOR ALERTS</span>
+        <div className="search-box justify-start text-sm">
+          <Icon name="user" size={14} className="text-text-lo" />
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@email.com"
+            className="w-full bg-transparent text-text-hi outline-none placeholder:text-text-lo"
+          />
+        </div>
+        <button
+          type="button"
+          disabled={savingEmail}
+          onClick={() => void handleSaveEmail()}
+          className="btn btn-ghost w-full text-xs disabled:opacity-60"
+        >
+          Save email
+        </button>
+        {emailMessage ? <p className="text-xs text-text-mid">{emailMessage}</p> : null}
       </div>
 
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {[
-          { value: '6', label: 'Bought' },
-          { value: '3', label: 'Sold' },
-          { value: '4.9', label: 'Rating' },
+          { value: '—', label: 'Bought' },
+          { value: '—', label: 'Sold' },
+          { value: user.rating?.toFixed(1) ?? '—', label: 'Rating' },
         ].map((stat) => (
           <div key={stat.label} className="card text-center">
             <div className="font-display text-base font-bold sm:text-lg" style={{ fontFamily: 'var(--font-display)' }}>
@@ -64,6 +172,7 @@ export function ProfileView({ onOpenSaved }: ProfileViewProps) {
         ))}
         <button
           type="button"
+          onClick={onLogout}
           className="flex w-full items-center gap-2.5 px-0.5 py-2.5 text-left text-[13px] text-danger transition-all active:scale-[0.99] sm:text-sm"
         >
           <Icon name="x" size={16} />

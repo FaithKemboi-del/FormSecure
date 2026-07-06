@@ -1,10 +1,10 @@
 import { EventCard } from '../events/EventCard'
 import { Icon } from '../icons/Icon'
-import { mockEvents } from '../../data/mockEvents'
 import type { Event } from '../../types/event'
 
 interface SavedViewProps {
-  savedIds: Set<string>
+  savedEvents: Event[]
+  loading: boolean
   animatingId: string | null
   onToggleWishlist: (eventId: string) => void
   onViewEvent: (event: Event) => void
@@ -12,14 +12,13 @@ interface SavedViewProps {
 }
 
 export function SavedView({
-  savedIds,
+  savedEvents,
+  loading,
   animatingId,
   onToggleWishlist,
   onViewEvent,
   onJoinWaitlist,
 }: SavedViewProps) {
-  const savedEvents = mockEvents.filter((event) => savedIds.has(event.id))
-
   return (
     <div className="space-y-4">
       <div>
@@ -30,14 +29,22 @@ export function SavedView({
         </p>
       </div>
 
-      {savedEvents.length === 0 ? (
+      {loading ? (
+        <div className="card py-8 text-center">
+          <p className="text-sm text-text-mid">Loading saved events…</p>
+        </div>
+      ) : null}
+
+      {!loading && savedEvents.length === 0 ? (
         <div className="card flex flex-col items-center gap-3 py-10 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-dim">
             <Icon name="heart" size={20} className="text-emerald" />
           </div>
           <p className="text-sm text-text-mid">Tap the heart on any event to save it here.</p>
         </div>
-      ) : (
+      ) : null}
+
+      {!loading && savedEvents.length > 0 ? (
         <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
           {savedEvents.map((event) => (
             <EventCard
@@ -51,7 +58,7 @@ export function SavedView({
             />
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

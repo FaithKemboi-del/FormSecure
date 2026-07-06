@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -6,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models import User
+from app.models import User, VerificationStatus
 from app.services.auth import TokenError, decode_access_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -42,7 +43,24 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    if user.is_blocked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been suspended.",
+        )
+
     return user
+
+
+async def get_verified_user(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    if current_user.verification_status != VerificationStatus.VERIFIED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account is pending manual verification. You can browse events but cannot trade yet.",
+        )
+    return current_user
 
 
 async def get_admin_user(
